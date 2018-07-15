@@ -6,7 +6,6 @@ extern crate rayon;
 #[cfg(test)]
 extern crate approx;
 
-//use std::f64::consts::PI;
 use num_complex::Complex;
 use rootfind::solver::bisection;
 use rootfind::bracket::{Bounds};
@@ -72,6 +71,7 @@ fn compute_value_at_risk(
     -bisection(&f, &bounds, 100).unwrap()
 }
 fn compute_expected_shortfall(
+    alpha:f64,
     x_min:f64,
     x_max:f64,
     value_at_risk:f64,
@@ -83,7 +83,7 @@ fn compute_expected_shortfall(
         |u, x, u_index|{
             vk_pe(u, x, x_min, u_index)
         }
-    )
+    )/alpha
 }
 pub fn get_expected_shortfall_and_value_at_risk<T>(
     alpha:f64,
@@ -100,7 +100,8 @@ where T:Fn(&Complex<f64>)->Complex<f64>+std::marker::Sync+std::marker::Send
         x_max, &discrete_cf
     );
     let expected_shortfall=compute_expected_shortfall( 
-        x_min, x_max, 
+        alpha, x_min, 
+        x_max, 
         value_at_risk, 
         &discrete_cf
     );
@@ -133,7 +134,7 @@ mod tests {
     fn var_works() {
         let mu=2.0;
         let sigma=5.0;
-        let num_u=64;
+        let num_u=128;
         let x_min=-20.0;
         let x_max=25.0;
         let alpha=0.05;
@@ -144,6 +145,6 @@ mod tests {
             alpha, num_u, x_min, x_max, norm_cf
         );
         assert_abs_diff_eq!(reference_var, estimated_var, epsilon=0.0001);
-        assert_abs_diff_eq!(reference_es, estimated_es, epsilon=0.0001);
+        assert_abs_diff_eq!(reference_es, estimated_es, epsilon=0.001);
     }
 }
