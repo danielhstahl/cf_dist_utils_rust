@@ -1,0 +1,38 @@
+language: rust
+sudo: required
+rust:
+- stable
+- beta
+- nightly
+matrix:
+  allow_failures:
+  - rust: nightly
+addons:
+  apt:
+    packages:
+    - libcurl4-openssl-dev
+    - libelf-dev
+    - libdw-dev
+    - cmake
+    - gcc
+    - binutils-dev
+    - libiberty-dev
+after_success: |-
+  wget https://github.com/SimonKagstrom/kcov/archive/master.tar.gz &&
+  tar xzf master.tar.gz &&
+  cd kcov-master &&
+  mkdir build &&
+  cd build &&
+  cmake .. &&
+  make &&
+  make install DESTDIR=../../kcov-build &&
+  cd ../.. &&
+  rm -rf kcov-master &&
+  for file in target/debug/cf_dist_utils-*[^\.d]; do mkdir -p "target/cov/$(basename $file)"; ./kcov-build/usr/local/bin/kcov --exclude-pattern=/.cargo,/usr/lib --verify "target/cov/$(basename $file)" "$file"; done &&
+  bash <(curl -s https://codecov.io/bash) &&
+  echo "Uploaded code coverage"
+  cargo doc
+  cargo publish --token "$CARGO_API" --allow-dirty
+env:
+  matrix:
+    secure: tBUaV2UEP4LglBytnamnFRY3Hgh0Q//nedtGwX4+o83wA6wNGmI/wHRWptRGGcf1RRjrFCHYFcXjS9jMT2rnvSAUbr0L2JGZPFzgfcgZ33PT/hwzWBONMhij23YqvJ/vTe4/zPEgkxDM5l2QiJUGlyZ5o/CP7uHLzO5TsTPxDzuXEqukgnR6v/iRyTreYNvwamVSIIzmLDcEiRElAqFn8bg6y0eRvuWrX9bnz8u92D31V58FVnWgr0rYy4shL2dzx1KOYnsTGoSHRIl8qspXkHORmOt82QEDQ6F3oL1+lvUNP1sirjQEKJcBiS9MfQGnSOO0xX87kpe85W3b1W1mS8QEF5oGv8ByaMlnxqPV8riuKF3wAlrvYZAg5uwCCcIcR3wGM8q/SFju1JMf/wL9EJD7ftS9Z5HKTF99vcEqGARSx8uvVZe7I6WAjNcGpKkRmcKlssElnRg1TfAtYlPALh1qDHjGTgkK024YOJGUTXP7kyYRhp0XBAe+RVUICFiVtTeCpXNizhXMrvWFYlkyXwTi1X9Q1G9gbAOmXPZFSz5ChZZIXmQ4s1lddWR66hIXsWIvKX8JPLKe/1hLbtvgEDxhZtQz+ltBx33NDa/D7fLf/yy+jmGPK+97hTsT4MPVT0YNEdqA4i69hQcHGklDoCE9pL+SvQNi1/BICDkXu3I=
