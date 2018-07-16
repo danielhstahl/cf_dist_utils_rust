@@ -4,9 +4,11 @@ version = "0.1.0"
 authors = ["Daniel Stahl <danstahl1138@gmail.com>"]
 
 [dependencies]
-fang_oost = "0.6.0"
+fang_oost = "0.7.0"
 rootfind = "0.7.0"
 num-complex = "0.2"
 rayon = "1.0.1"
+
+[dev-dependencies]
 approx = "0.2.0"
 
