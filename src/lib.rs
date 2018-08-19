@@ -97,7 +97,9 @@ fn compute_expected_shortfall(
 /// range of distributions
 /// 
 /// # Examples
-/// '''
+/// ```
+/// extern crate num_complex;
+/// use num_complex::Complex;
 /// #[macro_use]
 /// extern crate approx;
 /// extern crate cf_dist_utils;
@@ -117,6 +119,7 @@ fn compute_expected_shortfall(
 /// assert_abs_diff_eq!(reference_var, estimated_var, epsilon=0.0001);
 /// assert_abs_diff_eq!(reference_es, estimated_es, epsilon=0.001);
 /// # }
+/// ```
 pub fn get_expected_shortfall_and_value_at_risk<T>(
     alpha:f64,
     num_u:usize,
@@ -142,7 +145,11 @@ where T:Fn(&Complex<f64>)->Complex<f64>+std::marker::Sync+std::marker::Send
 /// Returns vector of cumulative density function given a characteristic function. 
 ///  
 /// # Examples
-/// '''
+/// ```
+/// extern crate num_complex;
+/// use num_complex::Complex;
+/// extern crate cf_dist_utils;
+/// # fn main(){
 /// let mu = 2.0;
 /// let sigma = 5.0;
 /// let num_u = 128;
@@ -154,6 +161,8 @@ where T:Fn(&Complex<f64>)->Complex<f64>+std::marker::Sync+std::marker::Send
 /// let cdf=cf_dist_utils::get_cdf(
 ///     num_x, num_u, x_min, x_max, &norm_cf
 /// );
+/// # }
+/// ```
 pub fn get_cdf<T>(
     num_x:usize,
     num_u:usize,
