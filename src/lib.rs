@@ -1,3 +1,5 @@
+//! Contains functions for computing the partial expectation, quantile, and cumulative density 
+//! function given a characteristic function.  
 extern crate fang_oost;
 extern crate rootfind;
 extern crate num_complex;
@@ -85,6 +87,36 @@ fn compute_expected_shortfall(
         }
     )/alpha
 }
+/// Returns expected shortfall (partial expectation) and value at risk (quantile)
+/// given a characteristic function. 
+/// 
+/// # Remarks
+/// Technically there is no guarantee of convergence for value at risk. 
+/// The cosine expansion oscillates and the value at risk may be under
+/// or over stated.  However, in tests it appears to converge for a wide
+/// range of distributions
+/// 
+/// # Examples
+/// '''
+/// #[macro_use]
+/// extern crate approx;
+/// extern crate cf_dist_utils;
+/// # fn main(){
+/// let mu=2.0;
+/// let sigma=5.0;
+/// let num_u=128;
+/// let x_min=-20.0;
+/// let x_max=25.0;
+/// let alpha=0.05;
+/// let norm_cf=|u:&Complex<f64>| (u*mu+0.5*sigma*sigma*u*u).exp();
+/// let reference_var=6.224268;
+/// let reference_es=8.313564;
+/// let (estimated_es, estimated_var)=cf_dist_utils::get_expected_shortfall_and_value_at_risk(
+///     alpha, num_u, x_min, x_max, norm_cf
+/// );
+/// assert_abs_diff_eq!(reference_var, estimated_var, epsilon=0.0001);
+/// assert_abs_diff_eq!(reference_es, estimated_es, epsilon=0.001);
+/// # }
 pub fn get_expected_shortfall_and_value_at_risk<T>(
     alpha:f64,
     num_u:usize,
@@ -107,7 +139,21 @@ where T:Fn(&Complex<f64>)->Complex<f64>+std::marker::Sync+std::marker::Send
     );
     (expected_shortfall, value_at_risk)
 }
-
+/// Returns vector of cumulative density function given a characteristic function. 
+///  
+/// # Examples
+/// '''
+/// let mu = 2.0;
+/// let sigma = 5.0;
+/// let num_u = 128;
+/// let num_x = 1024; 
+/// let x_min=-20.0;
+/// let x_max=25.0;
+/// let norm_cf=|u:&Complex<f64>| (u*mu+0.5*sigma*sigma*u*u).exp();
+/// let reference_cdf=0.7257469;
+/// let cdf=cf_dist_utils::get_cdf(
+///     num_x, num_u, x_min, x_max, &norm_cf
+/// );
 pub fn get_cdf<T>(
     num_x:usize,
     num_u:usize,
@@ -142,7 +188,7 @@ mod tests {
         let reference_var=6.224268;
         let reference_es=8.313564;
         let (estimated_es, estimated_var)=get_expected_shortfall_and_value_at_risk(
-            alpha, num_u, x_min, x_max, norm_cf
+            alpha, num_u, x_min, x_max, &norm_cf
         );
         assert_abs_diff_eq!(reference_var, estimated_var, epsilon=0.0001);
         assert_abs_diff_eq!(reference_es, estimated_es, epsilon=0.001);
