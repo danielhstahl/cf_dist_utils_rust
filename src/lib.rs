@@ -202,7 +202,6 @@ where T:Fn(&Complex<f64>)->Complex<f64>+std::marker::Sync+std::marker::Send
 /// let x_min=-20.0;
 /// let x_max=25.0;
 /// let norm_cf=|u:&Complex<f64>| (u*mu+0.5*sigma*sigma*u*u).exp();
-/// let reference_cdf=0.7257469;
 /// let cdf=cf_dist_utils::get_cdf(
 ///     num_x, num_u, x_min, x_max, &norm_cf
 /// );
@@ -227,6 +226,42 @@ where T:Fn(&Complex<f64>)->Complex<f64>
     ).collect()
 }
 
+/// Returns cumulative density function at given x. 
+///  
+/// # Examples
+/// ```
+/// extern crate num_complex;
+/// use num_complex::Complex;
+/// extern crate cf_dist_utils;
+/// # fn main(){
+/// let mu = 2.0;
+/// let sigma = 5.0;
+/// let num_u = 128;
+/// let x = 0.0; 
+/// let x_min=-20.0;
+/// let x_max=25.0;
+/// let norm_cf_discrete=vec![Complex::new(1.0, 1.0), Complex::new(-1.0, 1.0)];
+/// let cdf=cf_dist_utils::get_cdf_discrete_cf(
+///     x, x_min, x_max, &norm_cf_discrete
+/// );
+/// # }
+/// ```
+pub fn get_cdf_discrete_cf(
+    x:f64,
+    x_min:f64,
+    x_max:f64,
+    discrete_cf:&[Complex<f64>]
+)->f64
+{
+    fang_oost::get_expectation_single_element_real(
+        x_min, x_max, x, 
+        discrete_cf, 
+        |u, x, u_index|{
+            vk_cdf(u, x, x_min, u_index)
+        }
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -247,4 +282,6 @@ mod tests {
         assert_abs_diff_eq!(reference_var, estimated_var, epsilon=0.0001);
         assert_abs_diff_eq!(reference_es, estimated_es, epsilon=0.001);
     }
+
 }
+
