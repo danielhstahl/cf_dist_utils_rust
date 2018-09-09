@@ -12,9 +12,6 @@ extern crate rayon;
 extern crate approx;
 
 use num_complex::Complex;
-/*use rootfind::solver::false_position_illinios;
-use rootfind::bracket::{Bounds};
-use rootfind::wrap::RealFn;*/
 
 use rayon::prelude::*;
 /**
