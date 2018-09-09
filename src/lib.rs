@@ -9,7 +9,7 @@ extern crate rayon;
 extern crate approx;
 
 use num_complex::Complex;
-use rootfind::solver::bisection;
+use rootfind::solver::false_position_illinios;
 use rootfind::bracket::{Bounds};
 use rootfind::wrap::RealFn;
 use rayon::prelude::*;
@@ -68,7 +68,7 @@ fn compute_value_at_risk(
         )-alpha
     };
     let f=RealFn::new(&in_f);
-    -bisection(&f, &bounds, 1000).expect("Bisection failed.  Requires alpha between 0 and 1.  Will end after 1000 iterations")
+    -false_position_illinios(&f, &bounds, 1000).expect("Bisection failed.  Requires alpha between 0 and 1.  Will end after 1000 iterations")
 }
 fn compute_expected_shortfall(
     alpha:f64,
