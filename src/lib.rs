@@ -56,9 +56,7 @@ fn compute_value_at_risk(
     x_min:f64,
     x_max:f64,
     discrete_cf:&[Complex<f64>]
-)->f64
-
-{
+)->f64 {
     let bounds=Bounds::new(x_min, x_max);
     let vf=|u, x, u_index|{
         vk_cdf(u, x, x_min, u_index)
@@ -70,7 +68,7 @@ fn compute_value_at_risk(
         )-alpha
     };
     let f=RealFn::new(&in_f);
-    -bisection(&f, &bounds, 100).unwrap()
+    -bisection(&f, &bounds, 100).expect("Bisection failed.  Requires alpha between 0 and 1;")
 }
 fn compute_expected_shortfall(
     alpha:f64,
