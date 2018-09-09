@@ -1,7 +1,10 @@
 //! Contains functions for computing the partial expectation, quantile, and cumulative density 
 //! function given a characteristic function.  
 extern crate fang_oost;
-extern crate rootfind;
+extern crate roots;
+use roots::SimpleConvergency;
+use roots::find_root_regula_falsi;
+
 extern crate num_complex;
 extern crate rayon;
 #[macro_use]
@@ -9,9 +12,10 @@ extern crate rayon;
 extern crate approx;
 
 use num_complex::Complex;
-use rootfind::solver::false_position_illinios;
+/*use rootfind::solver::false_position_illinios;
 use rootfind::bracket::{Bounds};
-use rootfind::wrap::RealFn;
+use rootfind::wrap::RealFn;*/
+
 use rayon::prelude::*;
 /**
     Function to compute the CDF of a distribution; see 
@@ -55,10 +59,11 @@ fn compute_value_at_risk(
     alpha:f64,
     x_min:f64,
     x_max:f64,
-    num_iterations:usize, 
+    max_iterations:usize, 
+    tolerance:f64,
     discrete_cf:&[Complex<f64>]
 )->f64 {
-    let bounds=Bounds::new(x_min, x_max);
+    //let bounds=Bounds::new(x_min, x_max);
     let vf=|u, x, u_index|{
         vk_cdf(u, x, x_min, u_index)
     };
@@ -68,8 +73,8 @@ fn compute_value_at_risk(
             &discrete_cf, vf
         )-alpha
     };
-    let f=RealFn::new(&in_f);
-    -false_position_illinios(&f, &bounds, num_iterations).expect("Bisection failed.  Requires alpha between 0 and 1.")
+    let mut convergency = SimpleConvergency { eps:tolerance, max_iter:max_iterations };
+    -find_root_regula_falsi(x_min, x_max, &in_f, &mut convergency).unwrap()
 }
 fn compute_expected_shortfall(
     alpha:f64,
@@ -109,25 +114,29 @@ fn compute_expected_shortfall(
 /// let x_min=-20.0;
 /// let x_max=25.0;
 /// let alpha=0.05;
-/// let num_iterations=1000;
+/// let max_iterations=1000;
+/// let tolerance=0.0001;
 /// let norm_cf=vec![Complex::new(1.0, 1.0), Complex::new(-1.0, 1.0)];
-/// let (estimated_es, estimated_var)=cf_dist_utils::get_expected_shortfall_and_value_at_risk_discrete_cf_n(
-///     alpha, x_min, x_max, num_iterations, &norm_cf
+/// let (estimated_es, estimated_var)=cf_dist_utils::get_expected_shortfall_and_value_at_risk_discrete_cf(
+///     alpha, x_min, x_max, max_iterations, tolerance, &norm_cf
 /// );
 /// # }
 /// ```
-pub fn get_expected_shortfall_and_value_at_risk_discrete_cf_n(
+pub fn get_expected_shortfall_and_value_at_risk_discrete_cf(
     alpha:f64,
     x_min:f64,
     x_max:f64,
-    num_iterations:usize,
+    max_iterations:usize,
+    tolerance:f64,
     discrete_cf:&[Complex<f64>]
 )->(f64, f64)
 {
     let value_at_risk=compute_value_at_risk(
         alpha, x_min, 
         x_max, 
-        num_iterations,  &discrete_cf
+        max_iterations, 
+        tolerance,
+        &discrete_cf
     );
     let expected_shortfall=compute_expected_shortfall( 
         alpha, x_min, 
@@ -137,20 +146,7 @@ pub fn get_expected_shortfall_and_value_at_risk_discrete_cf_n(
     );
     (expected_shortfall, value_at_risk)
 }
-/// Returns expected shortfall (partial expectation) and value at risk (quantile)
-/// given a discrete characteristic function. Has defaults for number of iterations.
-/// 
-pub fn get_expected_shortfall_and_value_at_risk_discrete_cf(
-    alpha:f64,
-    x_min:f64,
-    x_max:f64,
-    discrete_cf:&[Complex<f64>]
-)->(f64, f64)
-{
-    get_expected_shortfall_and_value_at_risk_discrete_cf_n(
-        alpha, x_min, x_max, 100, discrete_cf
-    )
-}
+
 /// Returns expected shortfall (partial expectation) and value at risk (quantile)
 /// given a characteristic function. 
 /// 
@@ -173,51 +169,39 @@ pub fn get_expected_shortfall_and_value_at_risk_discrete_cf(
 /// let num_u=128;
 /// let x_min=-20.0;
 /// let x_max=25.0;
-/// let num_iterations=1000;
+/// let max_iterations=1000;
+/// let tolerance=0.0000001;
 /// let alpha=0.05;
 /// let norm_cf=|u:&Complex<f64>| (u*mu+0.5*sigma*sigma*u*u).exp();
 /// let reference_var=6.224268;
 /// let reference_es=8.313564;
-/// let (estimated_es, estimated_var)=cf_dist_utils::get_expected_shortfall_and_value_at_risk_n(
-///     alpha, num_u, x_min, x_max, num_iterations, norm_cf
+/// let (estimated_es, estimated_var)=cf_dist_utils::get_expected_shortfall_and_value_at_risk(
+///     alpha, num_u, x_min, x_max, max_iterations, tolerance, norm_cf
 /// );
 /// assert_abs_diff_eq!(reference_var, estimated_var, epsilon=0.0001);
 /// assert_abs_diff_eq!(reference_es, estimated_es, epsilon=0.001);
 /// # }
 /// ```
-pub fn get_expected_shortfall_and_value_at_risk_n<T>(
+pub fn get_expected_shortfall_and_value_at_risk<T>(
     alpha:f64,
     num_u:usize,
     x_min:f64,
     x_max:f64,
-    num_iterations:usize,
+    max_iterations:usize,
+    tolerance:f64,
     fn_inv:T
 )->(f64, f64)
 where T:Fn(&Complex<f64>)->Complex<f64>+std::marker::Sync+std::marker::Send
 {
 
     let discrete_cf=fang_oost::get_discrete_cf(num_u, x_min, x_max, fn_inv);
-    get_expected_shortfall_and_value_at_risk_discrete_cf_n(
+    get_expected_shortfall_and_value_at_risk_discrete_cf(
         alpha, x_min, 
-        x_max, num_iterations, &discrete_cf
+        x_max, max_iterations, 
+        tolerance, &discrete_cf
     )
 }
-/// Returns expected shortfall (partial expectation) and value at risk (quantile)
-/// given a characteristic function. Defaults to 100 iterations.
-pub fn get_expected_shortfall_and_value_at_risk<T>(
-    alpha:f64,
-    num_u:usize,
-    x_min:f64,
-    x_max:f64,
-    fn_inv:T
-)->(f64, f64)
-where T:Fn(&Complex<f64>)->Complex<f64>+std::marker::Sync+std::marker::Send
-{
-    get_expected_shortfall_and_value_at_risk_n(
-        alpha, num_u, x_min, 
-        x_max, 100, fn_inv
-    )
-}
+
 
 /// Returns vector of cumulative density function given a characteristic function. 
 ///  
@@ -309,24 +293,7 @@ mod tests {
         let reference_var=6.224268;
         let reference_es=8.313564;
         let (estimated_es, estimated_var)=get_expected_shortfall_and_value_at_risk(
-            alpha, num_u, x_min, x_max, &norm_cf
-        );
-        assert_abs_diff_eq!(reference_var, estimated_var, epsilon=0.0001);
-        assert_abs_diff_eq!(reference_es, estimated_es, epsilon=0.001);
-    }
-    #[test]
-    fn var_num_works() {
-        let mu=2.0;
-        let sigma=5.0;
-        let num_u=128;
-        let x_min=-20.0;
-        let x_max=25.0;
-        let alpha=0.05;
-        let norm_cf=|u:&Complex<f64>| (u*mu+0.5*sigma*sigma*u*u).exp();
-        let reference_var=6.224268;
-        let reference_es=8.313564;
-        let (estimated_es, estimated_var)=get_expected_shortfall_and_value_at_risk_n(
-            alpha, num_u, x_min, x_max, 400, &norm_cf
+            alpha, num_u, x_min, x_max, 100, 0.0000001, &norm_cf
         );
         assert_abs_diff_eq!(reference_var, estimated_var, epsilon=0.0001);
         assert_abs_diff_eq!(reference_es, estimated_es, epsilon=0.001);
