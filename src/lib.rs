@@ -67,7 +67,7 @@ fn compute_value_at_risk(
     let in_f=|x:f64|{
         fang_oost::get_expectation_single_element_real(
             x_min, x_max, x, 
-            &discrete_cf, vf
+            discrete_cf, vf
         )-alpha
     };
     let mut convergency = SimpleConvergency { eps:tolerance, max_iter:max_iterations };
@@ -230,13 +230,18 @@ pub fn get_cdf<T>(
 where T:Fn(&Complex<f64>)->Complex<f64>
 +std::marker::Sync+std::marker::Send
 {
-    fang_oost::get_expectation_x_real(
-        num_x, num_u, 
-        x_min, x_max, cf, 
+    let x_domain=fang_oost::get_x_domain(num_x, x_min, x_max);
+    let discrete_cf=fang_oost::get_discrete_cf(
+        num_u, x_min, x_max, &cf
+    );
+    let result=fang_oost::get_expectation_real(
+        x_min, x_max, x_domain, 
+        &discrete_cf, 
         |u, x, u_index|{
             vk_cdf(u, x, x_min, u_index)
         }
-    ).collect()
+    ).collect();
+    result
 }
 
 /// Returns cumulative density function at given x. 
