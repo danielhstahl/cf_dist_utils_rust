@@ -16,7 +16,7 @@ Put the following in your Cargo.toml:
 
 ```toml
 [dependencies]
-cf_dist_utils = "0.6"
+cf_dist_utils = "0.7"
 ```
 
 Import and use:
