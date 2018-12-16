@@ -143,6 +143,42 @@ pub fn get_expected_shortfall_and_value_at_risk_discrete_cf(
     );
     (expected_shortfall, value_at_risk)
 }
+/// Returns expectation 
+/// given a discrete characteristic function. 
+/// 
+/// # Examples
+/// ```
+/// extern crate num_complex;
+/// use num_complex::Complex;
+/// #[macro_use]
+/// extern crate approx;
+/// extern crate cf_dist_utils;
+/// # fn main(){
+/// let mu=2.0;
+/// let sigma=5.0;
+/// let num_u=128;
+/// let x_min=-20.0;
+/// let x_max=25.0;
+/// let norm_cf=vec![Complex::new(1.0, 1.0), Complex::new(-1.0, 1.0)];
+/// let expectation=cf_dist_utils::get_expectation_discrete_cf(
+///     x_min, x_max, &norm_cf
+/// );
+/// # }
+/// ```
+pub fn get_expectation_discrete_cf(
+    x_min:f64,
+    x_max:f64,
+    discrete_cf:&[Complex<f64>]
+)->f64
+{
+    fang_oost::get_expectation_single_element_real(
+        x_min, x_max, x_max, 
+        discrete_cf, 
+        |u, x, u_index|{
+            vk_pe(u, x, x_min, u_index)
+        }
+    )
+}
 
 /// Returns expected shortfall (partial expectation) and value at risk (quantile)
 /// given a characteristic function. 
@@ -299,6 +335,18 @@ mod tests {
         );
         assert_abs_diff_eq!(reference_var, estimated_var, epsilon=0.0001);
         assert_abs_diff_eq!(reference_es, estimated_es, epsilon=0.001);
+    }
+    #[test]
+    fn expectation_works(){
+        let mu=2.0;
+        let sigma=5.0;
+        let num_u=128;
+        let x_min=-20.0;
+        let x_max=25.0;
+        let norm_cf=|u:&Complex<f64>| (u*mu+0.5*sigma*sigma*u*u).exp();
+        let discrete_cf=fang_oost::get_discrete_cf(num_u, x_min, x_max, norm_cf);
+        let expected=get_expectation_discrete_cf(x_min, x_max, &discrete_cf);
+        assert_abs_diff_eq!(expected, mu, epsilon=0.0001);
     }
 
 }
