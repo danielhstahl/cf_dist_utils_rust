@@ -57,18 +57,19 @@ fn vk_pe(
 fn vk_pv(
     u:f64,
     x:f64,
+    c:f64,
     a:f64,
     k:usize
 )->f64 {
     let arg=(x-a)*u;
     let u_den=1.0/u;
     if k==0 {
-        (x-a)*x.powi(2)+(x-a).powi(3)/3.0-(x-a).powi(2)*x
+        -(a-x).powi(3)/3.0-(a-x).powi(2)*(x-c)-(a-x)*(x-c).powi(2)
     } 
     else {
-        x.powi(2)*arg.sin()*u_den 
+        (x-c).powi(2)*arg.sin()*u_den 
             - 2.0*arg.sin()*u_den.powi(3)
-            + 2.0*(x*arg.cos()-a)*u_den.powi(2)
+            + 2.0*((x-c)*arg.cos()+c-a)*u_den.powi(2)
     }
 }
 
@@ -233,14 +234,14 @@ pub fn get_variance_discrete_cf(
             vk_pe(u, x, x_min, u_index)
         }
     );
-    let expectation_squared=fang_oost::get_expectation_single_element_real(
+    fang_oost::get_expectation_single_element_real(
         x_min, x_max, x_max, 
         discrete_cf, 
         |u, x, u_index|{
-            vk_pv(u, x, x_min, u_index)
+            vk_pv(u, x, expectation,  x_min, u_index)
         }
-    );
-    expectation_squared-expectation.powi(2)
+    )
+    //expectation_squared-expectation.powi(2)
 }
 
 /// Returns expected shortfall (partial expectation) and value at risk (quantile)
@@ -416,12 +417,12 @@ mod tests {
         let mu=2.0;
         let sigma=5.0;
         let num_u=128;
-        let x_min=-20.0;
-        let x_max=25.0;
+        let x_min=-40.0;
+        let x_max=45.0;
         let norm_cf=|u:&Complex<f64>| (u*mu+0.5*sigma*sigma*u*u).exp();
         let discrete_cf=fang_oost::get_discrete_cf(num_u, x_min, x_max, norm_cf);
         let expected=get_variance_discrete_cf(x_min, x_max, &discrete_cf);
-        assert_abs_diff_eq!(expected, sigma*sigma, epsilon=0.001);
+        assert_abs_diff_eq!(expected, sigma*sigma, epsilon=0.0001);
     }
 
 }
