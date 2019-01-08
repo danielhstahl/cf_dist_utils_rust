@@ -75,6 +75,27 @@ fn vk_pe(
         x*arg.sin()*u_den+u_den.powi(2)*(arg.cos()-1.0)
     }
 }
+/**
+    Function to compute the partial expectation squared of a distribution.
+*/
+fn vk_pv(
+    u:f64,
+    x:f64,
+    c:f64,
+    a:f64,
+    k:usize
+)->f64 {
+    let arg=(x-a)*u;
+    let u_den=1.0/u;
+    if k==0 {
+        -(a-x).powi(3)/3.0-(a-x).powi(2)*(x-c)-(a-x)*(x-c).powi(2)
+    } 
+    else {
+        (x-c).powi(2)*arg.sin()*u_den 
+            - 2.0*arg.sin()*u_den.powi(3)
+            + 2.0*((x-c)*arg.cos()+c-a)*u_den.powi(2)
+    }
+}
 
 fn compute_value_at_risk(
     alpha:f64,
@@ -208,6 +229,49 @@ pub fn get_expectation_discrete_cf(
         discrete_cf, 
         |u, x, u_index|{
             vk_pe(u, x, x_min, u_index)
+        }
+    )
+}
+/// Returns variance 
+/// given a discrete characteristic function. 
+/// 
+/// # Examples
+/// ```
+/// extern crate num_complex;
+/// use num_complex::Complex;
+/// #[macro_use]
+/// extern crate approx;
+/// extern crate cf_dist_utils;
+/// # fn main(){
+/// let mu=2.0;
+/// let sigma=5.0;
+/// let num_u=128;
+/// let x_min=-20.0;
+/// let x_max=25.0;
+/// let norm_cf=vec![Complex::new(1.0, 1.0), Complex::new(-1.0, 1.0)];
+/// let variance=cf_dist_utils::get_variance_discrete_cf(
+///     x_min, x_max, &norm_cf
+/// );
+/// # }
+/// ```
+pub fn get_variance_discrete_cf(
+    x_min:f64,
+    x_max:f64,
+    discrete_cf:&[Complex<f64>]
+)->f64
+{
+    let expectation=fang_oost::get_expectation_single_element_real(
+        x_min, x_max, x_max, 
+        discrete_cf, 
+        |u, x, u_index|{
+            vk_pe(u, x, x_min, u_index)
+        }
+    );
+    fang_oost::get_expectation_single_element_real(
+        x_min, x_max, x_max, 
+        discrete_cf, 
+        |u, x, u_index|{
+            vk_pv(u, x, expectation,  x_min, u_index)
         }
     )
 }
@@ -393,6 +457,18 @@ mod tests {
             alpha, num_u, x_min, x_max, 100, 0.0000001, &norm_cf
         ).unwrap_err();
         assert_eq!(err.description(), "Alpha needs to be within 0 and 1!");
+    }
+    #[test]
+    fn variance_works(){
+        let mu=2.0;
+        let sigma=5.0;
+        let num_u=128;
+        let x_min=-40.0;
+        let x_max=45.0;
+        let norm_cf=|u:&Complex<f64>| (u*mu+0.5*sigma*sigma*u*u).exp();
+        let discrete_cf=fang_oost::get_discrete_cf(num_u, x_min, x_max, norm_cf);
+        let expected=get_variance_discrete_cf(x_min, x_max, &discrete_cf);
+        assert_abs_diff_eq!(expected, sigma*sigma, epsilon=0.0001);
     }
 
 }
