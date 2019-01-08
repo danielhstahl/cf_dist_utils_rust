@@ -1,6 +1,6 @@
 [package]
 name = "cf_dist_utils"
-version = "0.7.0"
+version = "0.8.0"
 authors = ["Daniel Stahl <danstahl1138@gmail.com>"]
 homepage = "https://github.com/phillyfan1138/cf_dist_utils_rust"
 repository = "https://github.com/phillyfan1138/cf_dist_utils_rust"
@@ -10,7 +10,8 @@ description = "A library which has risk and distribution utilities."
 
 [dependencies]
 fang_oost = "0.13.7"
-roots = "0.0.4"
+#roots = "0.0.4"
+roots = {git = "https://github.com/vorot/roots"}
 num-complex = "0.2"
 rayon = "1.0.1"
 

@@ -4,7 +4,8 @@ extern crate fang_oost;
 extern crate roots;
 use roots::SimpleConvergency;
 use roots::find_root_regula_falsi;
-
+use std::error::Error;
+use std::fmt;
 extern crate num_complex;
 extern crate rayon;
 #[macro_use]
@@ -14,6 +15,29 @@ extern crate approx;
 use num_complex::Complex;
 
 use rayon::prelude::*;
+
+#[derive(Debug)]
+pub enum ValueAtRiskError {
+    Alpha,
+    Root(String)
+}
+
+impl fmt::Display for ValueAtRiskError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self{
+            ValueAtRiskError::Alpha=>write!(f, "Alpha Error"),
+            ValueAtRiskError::Root(_desc)=>write!(f, "Root Error")
+        }
+    }
+}
+impl Error for ValueAtRiskError {
+    fn description(&self) -> &str {
+        match self{
+            ValueAtRiskError::Alpha=>"Alpha needs to be within 0 and 1!",
+            ValueAtRiskError::Root(desc)=>&desc
+        }
+    }
+}
 /**
     Function to compute the CDF of a distribution; see 
     http://danielhstahl.com/static/media/CreditRiskExtensions.c31991d2.pdf
@@ -59,8 +83,7 @@ fn compute_value_at_risk(
     max_iterations:usize, 
     tolerance:f64,
     discrete_cf:&[Complex<f64>]
-)->f64 {
-    //let bounds=Bounds::new(x_min, x_max);
+)->Result<f64, ValueAtRiskError> {
     let vf=|u, x, u_index|{
         vk_cdf(u, x, x_min, u_index)
     };
@@ -71,7 +94,10 @@ fn compute_value_at_risk(
         )-alpha
     };
     let mut convergency = SimpleConvergency { eps:tolerance, max_iter:max_iterations };
-    -find_root_regula_falsi(x_min, x_max, &in_f, &mut convergency).unwrap()
+    match find_root_regula_falsi(x_min, x_max, &in_f, &mut convergency) {
+        Ok(v)=>Ok(-v),
+        Err(e)=>Err(ValueAtRiskError::Root(e.description().to_string()))
+    }
 }
 fn compute_expected_shortfall(
     alpha:f64,
@@ -116,7 +142,7 @@ fn compute_expected_shortfall(
 /// let norm_cf=vec![Complex::new(1.0, 1.0), Complex::new(-1.0, 1.0)];
 /// let (estimated_es, estimated_var)=cf_dist_utils::get_expected_shortfall_and_value_at_risk_discrete_cf(
 ///     alpha, x_min, x_max, max_iterations, tolerance, &norm_cf
-/// );
+/// ).unwrap();
 /// # }
 /// ```
 pub fn get_expected_shortfall_and_value_at_risk_discrete_cf(
@@ -126,22 +152,28 @@ pub fn get_expected_shortfall_and_value_at_risk_discrete_cf(
     max_iterations:usize,
     tolerance:f64,
     discrete_cf:&[Complex<f64>]
-)->(f64, f64)
+)->Result<(f64, f64), ValueAtRiskError>
 {
-    let value_at_risk=compute_value_at_risk(
-        alpha, x_min, 
-        x_max, 
-        max_iterations, 
-        tolerance,
-        &discrete_cf
-    );
-    let expected_shortfall=compute_expected_shortfall( 
-        alpha, x_min, 
-        x_max, 
-        value_at_risk, 
-        &discrete_cf
-    );
-    (expected_shortfall, value_at_risk)
+    if alpha>0.0 && alpha<1.0{
+        let value_at_risk=compute_value_at_risk(
+            alpha, x_min, 
+            x_max, 
+            max_iterations, 
+            tolerance,
+            &discrete_cf
+        )?;
+        let expected_shortfall=compute_expected_shortfall( 
+            alpha, x_min, 
+            x_max, 
+            value_at_risk, 
+            &discrete_cf
+        );
+        Ok((expected_shortfall, value_at_risk))
+    }
+    else {
+        Err(ValueAtRiskError::Alpha)
+    }
+    
 }
 /// Returns expectation 
 /// given a discrete characteristic function. 
@@ -210,7 +242,7 @@ pub fn get_expectation_discrete_cf(
 /// let reference_es=8.313564;
 /// let (estimated_es, estimated_var)=cf_dist_utils::get_expected_shortfall_and_value_at_risk(
 ///     alpha, num_u, x_min, x_max, max_iterations, tolerance, norm_cf
-/// );
+/// ).unwrap();
 /// assert_abs_diff_eq!(reference_var, estimated_var, epsilon=0.0001);
 /// assert_abs_diff_eq!(reference_es, estimated_es, epsilon=0.001);
 /// # }
@@ -223,7 +255,7 @@ pub fn get_expected_shortfall_and_value_at_risk<T>(
     max_iterations:usize,
     tolerance:f64,
     fn_inv:T
-)->(f64, f64)
+)->Result<(f64, f64), ValueAtRiskError>
 where T:Fn(&Complex<f64>)->Complex<f64>+std::marker::Sync+std::marker::Send
 {
 
@@ -332,7 +364,7 @@ mod tests {
         let reference_es=8.313564;
         let (estimated_es, estimated_var)=get_expected_shortfall_and_value_at_risk(
             alpha, num_u, x_min, x_max, 100, 0.0000001, &norm_cf
-        );
+        ).unwrap();
         assert_abs_diff_eq!(reference_var, estimated_var, epsilon=0.0001);
         assert_abs_diff_eq!(reference_es, estimated_es, epsilon=0.001);
     }
@@ -347,6 +379,20 @@ mod tests {
         let discrete_cf=fang_oost::get_discrete_cf(num_u, x_min, x_max, norm_cf);
         let expected=get_expectation_discrete_cf(x_min, x_max, &discrete_cf);
         assert_abs_diff_eq!(expected, mu, epsilon=0.0001);
+    }
+    #[test]
+    fn error_works(){
+        let mu=2.0;
+        let sigma=5.0;
+        let num_u=128;
+        let x_min=-20.0;
+        let x_max=25.0;
+        let alpha=-0.5;
+        let norm_cf=|u:&Complex<f64>| (u*mu+0.5*sigma*sigma*u*u).exp();
+        let err=get_expected_shortfall_and_value_at_risk(
+            alpha, num_u, x_min, x_max, 100, 0.0000001, &norm_cf
+        ).unwrap_err();
+        assert_eq!(err.description(), "Alpha needs to be within 0 and 1!");
     }
 
 }
