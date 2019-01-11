@@ -11,7 +11,9 @@ extern crate rayon;
 #[macro_use]
 #[cfg(test)]
 extern crate approx;
-
+extern crate serde_json;
+#[macro_use]
+extern crate serde_derive;
 use num_complex::Complex;
 
 use rayon::prelude::*;
@@ -25,19 +27,18 @@ pub enum ValueAtRiskError {
 impl fmt::Display for ValueAtRiskError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self{
-            ValueAtRiskError::Alpha=>write!(f, "Alpha Error"),
-            ValueAtRiskError::Root(_desc)=>write!(f, "Root Error")
+            ValueAtRiskError::Alpha=>write!(f, "Alpha needs to be within 0 and 1!"),
+            ValueAtRiskError::Root(desc)=>write!(f, "{}", desc)
         }
     }
 }
-impl Error for ValueAtRiskError {
-    fn description(&self) -> &str {
-        match self{
-            ValueAtRiskError::Alpha=>"Alpha needs to be within 0 and 1!",
-            ValueAtRiskError::Root(desc)=>&desc
-        }
-    }
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct RiskMetric {
+    pub expected_shortfall:f64,
+    pub value_at_risk:f64
 }
+
 /**
     Function to compute the CDF of a distribution; see 
     http://danielhstahl.com/static/media/CreditRiskExtensions.c31991d2.pdf
@@ -161,7 +162,10 @@ fn compute_expected_shortfall(
 /// let max_iterations=1000;
 /// let tolerance=0.0001;
 /// let norm_cf=vec![Complex::new(1.0, 1.0), Complex::new(-1.0, 1.0)];
-/// let (estimated_es, estimated_var)=cf_dist_utils::get_expected_shortfall_and_value_at_risk_discrete_cf(
+/// let cf_dist_utils::RiskMetric{
+///     expected_shortfall, 
+///     value_at_risk
+/// }=cf_dist_utils::get_expected_shortfall_and_value_at_risk_discrete_cf(
 ///     alpha, x_min, x_max, max_iterations, tolerance, &norm_cf
 /// ).unwrap();
 /// # }
@@ -173,7 +177,7 @@ pub fn get_expected_shortfall_and_value_at_risk_discrete_cf(
     max_iterations:usize,
     tolerance:f64,
     discrete_cf:&[Complex<f64>]
-)->Result<(f64, f64), ValueAtRiskError>
+)->Result<RiskMetric, ValueAtRiskError>
 {
     if alpha>0.0 && alpha<1.0{
         let value_at_risk=compute_value_at_risk(
@@ -189,7 +193,7 @@ pub fn get_expected_shortfall_and_value_at_risk_discrete_cf(
             value_at_risk, 
             &discrete_cf
         );
-        Ok((expected_shortfall, value_at_risk))
+        Ok(RiskMetric{expected_shortfall, value_at_risk})
     }
     else {
         Err(ValueAtRiskError::Alpha)
@@ -304,11 +308,14 @@ pub fn get_variance_discrete_cf(
 /// let norm_cf=|u:&Complex<f64>| (u*mu+0.5*sigma*sigma*u*u).exp();
 /// let reference_var=6.224268;
 /// let reference_es=8.313564;
-/// let (estimated_es, estimated_var)=cf_dist_utils::get_expected_shortfall_and_value_at_risk(
+/// let cf_dist_utils::RiskMetric{
+///     expected_shortfall, 
+///     value_at_risk
+/// }=cf_dist_utils::get_expected_shortfall_and_value_at_risk(
 ///     alpha, num_u, x_min, x_max, max_iterations, tolerance, norm_cf
 /// ).unwrap();
-/// assert_abs_diff_eq!(reference_var, estimated_var, epsilon=0.0001);
-/// assert_abs_diff_eq!(reference_es, estimated_es, epsilon=0.001);
+/// assert_abs_diff_eq!(reference_var, value_at_risk, epsilon=0.0001);
+/// assert_abs_diff_eq!(reference_es, expected_shortfall, epsilon=0.001);
 /// # }
 /// ```
 pub fn get_expected_shortfall_and_value_at_risk<T>(
@@ -319,7 +326,7 @@ pub fn get_expected_shortfall_and_value_at_risk<T>(
     max_iterations:usize,
     tolerance:f64,
     fn_inv:T
-)->Result<(f64, f64), ValueAtRiskError>
+)->Result<RiskMetric, ValueAtRiskError>
 where T:Fn(&Complex<f64>)->Complex<f64>+std::marker::Sync+std::marker::Send
 {
 
@@ -426,11 +433,13 @@ mod tests {
         let norm_cf=|u:&Complex<f64>| (u*mu+0.5*sigma*sigma*u*u).exp();
         let reference_var=6.224268;
         let reference_es=8.313564;
-        let (estimated_es, estimated_var)=get_expected_shortfall_and_value_at_risk(
+        let RiskMetric{
+            expected_shortfall, value_at_risk
+        }=get_expected_shortfall_and_value_at_risk(
             alpha, num_u, x_min, x_max, 100, 0.0000001, &norm_cf
         ).unwrap();
-        assert_abs_diff_eq!(reference_var, estimated_var, epsilon=0.0001);
-        assert_abs_diff_eq!(reference_es, estimated_es, epsilon=0.001);
+        assert_abs_diff_eq!(reference_var, value_at_risk, epsilon=0.0001);
+        assert_abs_diff_eq!(reference_es, expected_shortfall, epsilon=0.001);
     }
     #[test]
     fn expectation_works(){
@@ -456,7 +465,7 @@ mod tests {
         let err=get_expected_shortfall_and_value_at_risk(
             alpha, num_u, x_min, x_max, 100, 0.0000001, &norm_cf
         ).unwrap_err();
-        assert_eq!(err.description(), "Alpha needs to be within 0 and 1!");
+        assert_eq!(&err.to_string(), "Alpha needs to be within 0 and 1!");
     }
     #[test]
     fn variance_works(){
