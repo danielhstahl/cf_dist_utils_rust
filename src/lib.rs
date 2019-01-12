@@ -1,5 +1,6 @@
 //! Contains functions for computing the partial expectation, quantile, and cumulative density
 //! function given a characteristic function.  
+#![feature(test)]
 extern crate fang_oost;
 extern crate roots;
 use roots::find_root_regula_falsi;
@@ -365,9 +366,15 @@ pub fn get_cdf_discrete_cf(x: f64, x_min: f64, x_max: f64, discrete_cf: &[Comple
     })
 }
 
+
+
+extern crate test;
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test::Bencher;
+
     #[test]
     fn var_works() {
         let mu = 2.0;
@@ -427,6 +434,31 @@ mod tests {
         let discrete_cf = fang_oost::get_discrete_cf(num_u, x_min, x_max, norm_cf);
         let expected = get_variance_discrete_cf(x_min, x_max, &discrete_cf);
         assert_abs_diff_eq!(expected, sigma * sigma, epsilon = 0.0001);
+    }
+
+    #[bench]
+    fn bench_variance(b: &mut Bencher) {
+        let mu = 2.0;
+        let sigma = 5.0;
+        let num_u = 128;
+        let x_min = -40.0;
+        let x_max = 45.0;
+        let norm_cf = |u: &Complex<f64>| (u * mu + 0.5 * sigma * sigma * u * u).exp();
+        let discrete_cf = fang_oost::get_discrete_cf(num_u, x_min, x_max, norm_cf);
+        b.iter(|| get_variance_discrete_cf(x_min, x_max, &discrete_cf));
+    }
+    #[bench]
+    fn bench_value_at_risk(b: &mut Bencher) {
+        let mu = 2.0;
+        let sigma = 5.0;
+        let num_u = 128;
+        let x_min = -20.0;
+        let x_max = 25.0;
+        let alpha = 0.05;
+        let norm_cf = |u: &Complex<f64>| (u * mu + 0.5 * sigma * sigma * u * u).exp();
+        b.iter(|| get_expected_shortfall_and_value_at_risk(
+            alpha, num_u, x_min, x_max, 100, 0.0000001, &norm_cf,
+        ));
     }
 
 }
