@@ -20,6 +20,11 @@ serde_derive = "^1"
 
 [dev-dependencies]
 approx = "0.2.0"
+bencher = "0.1.5"
+
+[[bench]]
+name = "bench"
+harness = false
 
 [badges]
 travis-ci = { repository = "phillyfan1138/cf_dist_utils_rust" }
