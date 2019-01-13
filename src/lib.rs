@@ -19,19 +19,27 @@ use num_complex::Complex;
 use rayon::prelude::*;
 
 #[derive(Debug)]
-pub enum ValueAtRiskError {
-    Alpha,
-    Root(String),
+pub struct ValueAtRiskError {
+    msg: String
+}
+impl ValueAtRiskError {
+    pub fn new(msg:&str)->Self{
+        ValueAtRiskError{msg:msg.to_string()}
+    }
+}
+impl Error for ValueAtRiskError{
+    fn description(&self)->&str {
+        &self.msg
+    }
 }
 
 impl fmt::Display for ValueAtRiskError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            ValueAtRiskError::Alpha => write!(f, "Alpha needs to be within 0 and 1!"),
-            ValueAtRiskError::Root(desc) => write!(f, "{}", desc),
-        }
+        write!(f, "{}", self.msg)
     }
 }
+
+const ALPHA_ERROR: &str = "Alpha must be between 0 and 1.";
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct RiskMetric {
@@ -101,7 +109,7 @@ fn compute_value_at_risk(
     };
     match find_root_regula_falsi(x_min, x_max, &in_f, &mut convergency) {
         Ok(v) => Ok(-v),
-        Err(e) => Err(ValueAtRiskError::Root(e.description().to_string())),
+        Err(e) => Err(ValueAtRiskError::new(e.description())),
     }
 }
 fn compute_expected_shortfall(
@@ -171,7 +179,7 @@ pub fn get_expected_shortfall_and_value_at_risk_discrete_cf(
             value_at_risk,
         })
     } else {
-        Err(ValueAtRiskError::Alpha)
+        Err(ValueAtRiskError::new(ALPHA_ERROR))
     }
 }
 /// Returns expectation
@@ -414,7 +422,7 @@ mod tests {
             alpha, num_u, x_min, x_max, 100, 0.0000001, &norm_cf,
         )
         .unwrap_err();
-        assert_eq!(&err.to_string(), "Alpha needs to be within 0 and 1!");
+        assert_eq!(&err.to_string(), "Alpha must be between 0 and 1.");
     }
     #[test]
     fn variance_works() {
