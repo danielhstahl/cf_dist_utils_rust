@@ -1,22 +1,11 @@
 //! Contains functions for computing the partial expectation, quantile, and cumulative density
 //! function given a characteristic function.  
-extern crate fang_oost;
-extern crate roots;
-use roots::find_root_regula_falsi;
-use roots::SimpleConvergency;
-use std::error::Error;
-use std::fmt;
-extern crate num_complex;
-extern crate rayon;
-#[macro_use]
-#[cfg(test)]
-extern crate approx;
-extern crate serde_json;
-#[macro_use]
-extern crate serde_derive;
-use num_complex::Complex;
 
+use roots::{find_root_regula_falsi, SimpleConvergency};
+use std::{error::Error, fmt};
+use num_complex::Complex;
 use rayon::prelude::*;
+use serde_derive::{Deserialize, Serialize};
 
 #[derive(Debug)]
 pub struct ValueAtRiskError {
@@ -376,6 +365,7 @@ pub fn get_cdf_discrete_cf(x: f64, x_min: f64, x_max: f64, discrete_cf: &[Comple
 #[cfg(test)]
 mod tests {
     use super::*;
+    use approx::*;
     #[test]
     fn var_works() {
         let mu = 2.0;
