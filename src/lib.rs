@@ -1,5 +1,5 @@
 //! Contains functions for computing the partial expectation, quantile, and cumulative density
-//! function given a characteristic function.  
+//! function given a characteristic function.
 
 use roots::{find_root_regula_falsi, SimpleConvergency};
 use std::{error::Error, fmt};
@@ -303,7 +303,7 @@ where
 }
 
 /// Returns vector of cumulative density function given a characteristic function.
-///  
+///
 /// # Examples
 /// ```
 /// extern crate num_complex;
@@ -337,7 +337,7 @@ where
 }
 
 /// Returns cumulative density function at given x.
-///  
+///
 /// # Examples
 /// ```
 /// extern crate num_complex;
