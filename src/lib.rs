@@ -1,23 +1,25 @@
 //! Contains functions for computing the partial expectation, quantile, and cumulative density
 //! function given a characteristic function.
 
-use roots::{find_root_regula_falsi, SimpleConvergency};
-use std::{error::Error, fmt};
 use num_complex::Complex;
 use rayon::prelude::*;
+use roots::{find_root_regula_falsi, SimpleConvergency};
 use serde_derive::{Deserialize, Serialize};
+use std::{error::Error, fmt};
 
 #[derive(Debug)]
 pub struct ValueAtRiskError {
-    msg: String
+    msg: String,
 }
 impl ValueAtRiskError {
-    pub fn new(msg:&str)->Self{
-        ValueAtRiskError{msg:msg.to_string()}
+    pub fn new(msg: &str) -> Self {
+        ValueAtRiskError {
+            msg: msg.to_string(),
+        }
     }
 }
-impl Error for ValueAtRiskError{
-    fn description(&self)->&str {
+impl Error for ValueAtRiskError {
+    fn description(&self) -> &str {
         &self.msg
     }
 }
