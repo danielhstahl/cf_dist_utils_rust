@@ -100,7 +100,7 @@ fn compute_value_at_risk(
     };
     match find_root_regula_falsi(x_min, x_max, &in_f, &mut convergency) {
         Ok(v) => Ok(-v),
-        Err(e) => Err(ValueAtRiskError::new(e.description())),
+        Err(e) => Err(ValueAtRiskError::new(&e.to_string())),
     }
 }
 fn compute_expected_shortfall(
