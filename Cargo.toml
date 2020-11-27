@@ -2,8 +2,8 @@
 name = "cf_dist_utils"
 version = "0.9.1"
 authors = ["Daniel Stahl <danstahl1138@gmail.com>"]
-homepage = "https://github.com/phillyfan1138/cf_dist_utils_rust"
-repository = "https://github.com/phillyfan1138/cf_dist_utils_rust"
+homepage = "https://github.com/danielhstahl/cf_dist_utils_rust"
+repository = "https://github.com/danielhstahl/cf_dist_utils_rust"
 readme = "README.md"
 license = "MIT"
 description = "A library which has risk and distribution utilities."
@@ -19,11 +19,8 @@ serde_derive = "^1"
 
 [dev-dependencies]
 approx = "0.2.0"
-criterion = "0.2"
+criterion = "0.3"
 
 [[bench]]
 name = "bench"
 harness = false
-
-[badges]
-travis-ci = { repository = "phillyfan1138/cf_dist_utils_rust" }
