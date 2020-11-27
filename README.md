@@ -2,14 +2,14 @@
 | :---------------: | :-------------------: |
 | ![lin-badge]      | ![cov-badge]          |
 
-[lin-badge]: https://github.com/phillyfan1138/cf_dist_utils_rust/workflows/Rust/badge.svg
-[lin-link]:  https://github.com/phillyfan1138/cf_dist_utils_rust/actions
-[cov-badge]: https://codecov.io/gh/phillyfan1138/cf_dist_utils_rust/branch/master/graph/badge.svg
-[cov-link]:  https://codecov.io/gh/phillyfan1138/cf_dist_utils_rust
+[lin-badge]: https://github.com/danielhstahl/cf_dist_utils_rust/workflows/Rust/badge.svg
+[lin-link]:  https://github.com/danielhstahl/cf_dist_utils_rust/actions
+[cov-badge]: https://codecov.io/gh/danielhstahl/cf_dist_utils_rust/branch/master/graph/badge.svg
+[cov-link]:  https://codecov.io/gh/danielhstahl/cf_dist_utils_rust
 
 # cf_dist_utils
 
-This is a set of utilities to wrap around my [fang_oost](https://github.com/phillyfan1138/fang_oost_rust) library. Documentation is on [docs.rs](https://docs.rs/cf_dist_utils/0.6.1/cf_dist_utils/). The main features are the ability to compute VaR, the CDF of a distribution, and the expected shortfall of a distribution.
+This is a set of utilities to wrap around my [fang_oost](https://github.com/danielhstahl/fang_oost_rust) library. Documentation is on [docs.rs](https://docs.rs/cf_dist_utils/0.6.1/cf_dist_utils/). The main features are the ability to compute VaR, the CDF of a distribution, and the expected shortfall of a distribution.
 
 ## using cf_dist_utils
 Put the following in your Cargo.toml:
@@ -41,4 +41,4 @@ let (estimated_es, estimated_var)=cf_dist_utils::get_expected_shortfall_and_valu
 
 # Benchmarks
 
-https://phillyfan1138.github.io/cf_dist_utils_rust/report/index.html
+https://danielhstahl.github.io/cf_dist_utils_rust/report/index.html
