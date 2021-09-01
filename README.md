@@ -9,14 +9,14 @@
 
 # cf_dist_utils
 
-This is a set of utilities to wrap around my [fang_oost](https://github.com/danielhstahl/fang_oost_rust) library. Documentation is on [docs.rs](https://docs.rs/cf_dist_utils/0.6.1/cf_dist_utils/). The main features are the ability to compute VaR, the CDF of a distribution, and the expected shortfall of a distribution.
+This is a set of utilities to wrap around my [fang_oost](https://github.com/danielhstahl/fang_oost_rust) library. Documentation is on [docs.rs](https://docs.rs/cf_dist_utils/0.10.0/cf_dist_utils/). The main features are the ability to compute VaR, the CDF of a distribution, and the expected shortfall of a distribution.
 
 ## using cf_dist_utils
 Put the following in your Cargo.toml:
 
 ```toml
 [dependencies]
-cf_dist_utils = "0.8"
+cf_dist_utils = "0.10"
 ```
 
 Import and use:
