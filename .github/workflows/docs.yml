@@ -25,5 +25,4 @@ jobs:
         rust-version: stable
     - name: Publish
       run: |
-        cargo bench
         cargo publish --token ${{ secrets.CARGO_TOKEN }} --allow-dirty || true
