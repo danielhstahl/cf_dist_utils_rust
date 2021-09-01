@@ -315,6 +315,7 @@ where
 /// ```
 /// extern crate num_complex;
 /// use num_complex::Complex;
+/// use rayon::prelude::*;
 /// extern crate cf_dist_utils;
 /// # fn main(){
 /// let mu = 2.0;
@@ -324,9 +325,9 @@ where
 /// let x_min=-20.0;
 /// let x_max=25.0;
 /// let norm_cf=|u:&Complex<f64>| (u*mu+0.5*sigma*sigma*u*u).exp();
-/// let cdf=cf_dist_utils::get_cdf(
+/// let cdf:Vec<fang_oost::GraphElement>=cf_dist_utils::get_cdf(
 ///     num_x, num_u, x_min, x_max, &norm_cf
-/// );
+/// ).collect();
 /// # }
 /// ```
 pub fn get_cdf<T>(
@@ -335,17 +336,18 @@ pub fn get_cdf<T>(
     x_min: f64,
     x_max: f64,
     cf: T,
-) -> Vec<fang_oost::GraphElement>
+) -> impl IndexedParallelIterator<Item = fang_oost::GraphElement>
 where
     T: Fn(&Complex<f64>) -> Complex<f64> + std::marker::Sync + std::marker::Send,
 {
     let x_domain = fang_oost::get_x_domain(num_x, x_min, x_max);
-    let discrete_cf = fang_oost::get_discrete_cf(num_u, x_min, x_max, &cf);
-
-    fang_oost::get_expectation_real(x_min, x_max, x_domain, &discrete_cf, |u, x, u_index| {
-        vk_cdf(u, x, x_min, u_index)
-    })
-    .collect()
+    fang_oost::get_expectation_real_move(
+        x_min,
+        x_max,
+        x_domain,
+        fang_oost::get_discrete_cf(num_u, x_min, x_max, &cf),
+        move |u, x, u_index| vk_cdf(u, x, x_min, u_index),
+    )
 }
 
 /// Returns vector of cumulative density function given a characteristic function.
@@ -354,6 +356,7 @@ where
 /// ```
 /// extern crate num_complex;
 /// use num_complex::Complex;
+/// use rayon::prelude::*;
 /// extern crate cf_dist_utils;
 /// # fn main(){
 /// let mu = 2.0;
@@ -363,9 +366,9 @@ where
 /// let x_min=-20.0;
 /// let x_max=25.0;
 /// let norm_cf=|u:&Complex<f64>| (u*mu+0.5*sigma*sigma*u*u).exp();
-/// let pdf=cf_dist_utils::get_pdf(
+/// let pdf:Vec<fang_oost::GraphElement>=cf_dist_utils::get_pdf(
 ///     num_x, num_u, x_min, x_max, &norm_cf
-/// );
+/// ).collect();
 /// # }
 /// ```
 pub fn get_pdf<T>(
@@ -374,16 +377,18 @@ pub fn get_pdf<T>(
     x_min: f64,
     x_max: f64,
     cf: T,
-) -> Vec<fang_oost::GraphElement>
+) -> impl IndexedParallelIterator<Item = fang_oost::GraphElement>
 where
     T: Fn(&Complex<f64>) -> Complex<f64> + std::marker::Sync + std::marker::Send,
 {
     let x_domain = fang_oost::get_x_domain(num_x, x_min, x_max);
-    let discrete_cf = fang_oost::get_discrete_cf(num_u, x_min, x_max, &cf);
-    fang_oost::get_expectation_real(x_min, x_max, x_domain, &discrete_cf, move |u, x, _| {
-        (u * (x - x_min)).cos()
-    })
-    .collect()
+    fang_oost::get_expectation_real_move(
+        x_min,
+        x_max,
+        x_domain,
+        fang_oost::get_discrete_cf(num_u, x_min, x_max, &cf),
+        move |u, x, _| (u * (x - x_min)).cos(),
+    )
 }
 
 /// Returns cumulative density function at given x.
@@ -492,7 +497,7 @@ mod tests {
             })
             .collect();
         let my_inverse: Vec<fang_oost::GraphElement> =
-            get_pdf(num_x, num_u, x_min, x_max, &norm_cf);
+            get_pdf(num_x, num_u, x_min, x_max, &norm_cf).collect();
         for (reference, estimate) in ref_normal.iter().zip(my_inverse) {
             assert_abs_diff_eq!(*reference, estimate.value, epsilon = 0.001);
         }

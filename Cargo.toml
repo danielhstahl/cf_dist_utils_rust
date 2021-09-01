@@ -10,7 +10,7 @@ repository = "https://github.com/danielhstahl/cf_dist_utils_rust"
 version = "0.10.0"
 
 [dependencies]
-fang_oost = "0.15.0"
+fang_oost = "^0.15.1"
 num-complex = "0.2"
 rayon = "1.0.1"
 roots = "0.0.5"
