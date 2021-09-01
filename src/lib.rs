@@ -1,6 +1,5 @@
 //! Contains functions for computing the partial expectation, quantile, and cumulative density
 //! function given a characteristic function.
-
 use num_complex::Complex;
 use rayon::prelude::*;
 use roots::{find_root_regula_falsi, SimpleConvergency};
@@ -37,6 +36,12 @@ pub struct RiskMetric {
     pub expected_shortfall: f64,
     pub value_at_risk: f64,
 }
+/*
+#[derive(Serialize, Deserialize, Debug)]
+pub struct GraphElement {
+    pub x: f64,
+    pub value: f64,
+}*/
 
 /**
     Function to compute the CDF of a distribution; see
@@ -324,18 +329,61 @@ where
 /// );
 /// # }
 /// ```
-pub fn get_cdf<T>(num_x: usize, num_u: usize, x_min: f64, x_max: f64, cf: T) -> Vec<f64>
+pub fn get_cdf<T>(
+    num_x: usize,
+    num_u: usize,
+    x_min: f64,
+    x_max: f64,
+    cf: T,
+) -> Vec<fang_oost::GraphElement>
 where
     T: Fn(&Complex<f64>) -> Complex<f64> + std::marker::Sync + std::marker::Send,
 {
     let x_domain = fang_oost::get_x_domain(num_x, x_min, x_max);
     let discrete_cf = fang_oost::get_discrete_cf(num_u, x_min, x_max, &cf);
-    let result =
-        fang_oost::get_expectation_real(x_min, x_max, x_domain, &discrete_cf, |u, x, u_index| {
-            vk_cdf(u, x, x_min, u_index)
-        })
-        .collect();
-    result
+
+    fang_oost::get_expectation_real(x_min, x_max, x_domain, &discrete_cf, |u, x, u_index| {
+        vk_cdf(u, x, x_min, u_index)
+    })
+    .collect()
+}
+
+/// Returns vector of cumulative density function given a characteristic function.
+///
+/// # Examples
+/// ```
+/// extern crate num_complex;
+/// use num_complex::Complex;
+/// extern crate cf_dist_utils;
+/// # fn main(){
+/// let mu = 2.0;
+/// let sigma = 5.0;
+/// let num_u = 128;
+/// let num_x = 1024;
+/// let x_min=-20.0;
+/// let x_max=25.0;
+/// let norm_cf=|u:&Complex<f64>| (u*mu+0.5*sigma*sigma*u*u).exp();
+/// let pdf=cf_dist_utils::get_pdf(
+///     num_x, num_u, x_min, x_max, &norm_cf
+/// );
+/// # }
+/// ```
+pub fn get_pdf<T>(
+    num_x: usize,
+    num_u: usize,
+    x_min: f64,
+    x_max: f64,
+    cf: T,
+) -> Vec<fang_oost::GraphElement>
+where
+    T: Fn(&Complex<f64>) -> Complex<f64> + std::marker::Sync + std::marker::Send,
+{
+    let x_domain = fang_oost::get_x_domain(num_x, x_min, x_max);
+    let discrete_cf = fang_oost::get_discrete_cf(num_u, x_min, x_max, &cf);
+    fang_oost::get_expectation_real(x_min, x_max, x_domain, &discrete_cf, move |u, x, _| {
+        (u * (x - x_min)).cos()
+    })
+    .collect()
 }
 
 /// Returns cumulative density function at given x.
@@ -368,6 +416,7 @@ pub fn get_cdf_discrete_cf(x: f64, x_min: f64, x_max: f64, discrete_cf: &[Comple
 mod tests {
     use super::*;
     use approx::*;
+    use std::f64::consts::PI;
     #[test]
     fn var_works() {
         let mu = 2.0;
@@ -427,5 +476,25 @@ mod tests {
         let discrete_cf = fang_oost::get_discrete_cf(num_u, x_min, x_max, norm_cf);
         let expected = get_variance_discrete_cf(x_min, x_max, &discrete_cf);
         assert_abs_diff_eq!(expected, sigma * sigma, epsilon = 0.0001);
+    }
+    #[test]
+    fn test_compute_inv() {
+        let mu = 2.0;
+        let sigma = 1.0;
+        let num_x = 5;
+        let num_u = 256;
+        let x_min = -3.0;
+        let x_max = 7.0;
+        let norm_cf = |u: &Complex<f64>| (u * mu + 0.5 * u * u * sigma * sigma).exp();
+        let ref_normal: Vec<f64> = fang_oost::get_x_domain(num_x, x_min, x_max)
+            .map(|x| {
+                (-(x - mu).powi(2) / (2.0 * sigma * sigma)).exp() / (sigma * (2.0 * PI).sqrt())
+            })
+            .collect();
+        let my_inverse: Vec<fang_oost::GraphElement> =
+            get_pdf(num_x, num_u, x_min, x_max, &norm_cf);
+        for (reference, estimate) in ref_normal.iter().zip(my_inverse) {
+            assert_abs_diff_eq!(*reference, estimate.value, epsilon = 0.001);
+        }
     }
 }
